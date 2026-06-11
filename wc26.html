@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>世界杯26 · 赛程盘口</title>
+<style>
+  :root{
+    --turf:#0E271C;        /* 夜场草皮 */
+    --chalk:#F1F6EF;       /* 粉笔白 */
+    --chalk-dim:#9DB7A8;
+    --line:#2A5440;        /* 边线 */
+    --flood:#FFD75E;       /* 泛光金：盘口 */
+    --home:#FF8073;        /* 主水红 */
+    --away:#7CC4FF;        /* 客水蓝 */
+    --live:#5BE38B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{font-size:16px}
+  body{
+    font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(120% 60% at 50% -10%, #1B4A33 0%, var(--turf) 55%),
+      var(--turf);
+    color:var(--chalk);
+    min-height:100vh;
+    max-width:560px;margin:0 auto;
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+  .num{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums}
+
+  /* ===== 顶栏 ===== */
+  header{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(var(--turf) 78%, transparent);
+    padding:14px 16px 4px;
+  }
+  .topline{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+  .eyebrow{font-size:.66rem;letter-spacing:.32em;color:var(--flood);font-weight:700}
+  h1{font-size:1.32rem;font-weight:800;letter-spacing:.04em;line-height:1.25}
+  .bjdate{font-size:.78rem;color:var(--chalk-dim);margin-top:3px}
+  .seal{
+    display:inline-block;margin-left:7px;
+    width:17px;height:17px;line-height:17px;text-align:center;
+    background:var(--flood);color:var(--turf);
+    font-size:.62rem;font-weight:800;border-radius:4px;
+    vertical-align:1px;
+  }
+  .refresh{
+    flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+    background:none;border:none;color:var(--chalk);cursor:pointer;font:inherit;
+  }
+  .refresh .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    border:1px solid var(--line);border-radius:999px;
+    padding:6px 13px;font-size:.8rem;font-weight:600;color:var(--chalk);
+    background:rgba(255,255,255,.03);
+  }
+  .refresh:active .btn{background:rgba(255,215,94,.12);border-color:var(--flood)}
+  .refresh .ico{display:inline-block;font-size:.85rem}
+  .spin .ico{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .status{font-size:.66rem;color:var(--chalk-dim)}
+  .status.ok{color:var(--live)}
+  .status.err{color:var(--home)}
+  .refresh:focus-visible .btn{outline:2px solid var(--flood);outline-offset:2px}
+
+  /* ===== 日期页签 ===== */
+  nav{
+    position:sticky;top:74px;z-index:19;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+    padding:8px 16px 10px;background:var(--turf);
+    border-bottom:1px solid var(--line);
+  }
+  nav button{
+    font:inherit;border:1px solid transparent;background:none;color:var(--chalk-dim);
+    border-radius:12px;padding:7px 2px 6px;cursor:pointer;text-align:center;
+  }
+  nav button .lab{display:block;font-size:.86rem;font-weight:700}
+  nav button .d{display:block;font-size:.64rem;margin-top:2px;letter-spacing:.05em}
+  nav button .dot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--flood);margin-left:3px;vertical-align:2px;opacity:0}
+  nav button.has .dot{opacity:1}
+  nav button[aria-selected="true"]{
+    color:var(--turf);background:var(--flood);border-color:var(--flood);font-weight:800;
+  }
+  nav button[aria-selected="true"] .d{color:#5a4a12}
+  nav button[aria-selected="true"] .dot{background:var(--turf)}
+  nav button:focus-visible{outline:2px solid var(--flood);outline-offset:2px}
+
+  /* ===== 内容 ===== */
+  main{padding:14px 16px 0}
+  .daymeta{display:flex;justify-content:space-between;align-items:baseline;margin:2px 2px 12px}
+  .daymeta .t{font-size:.9rem;font-weight:700}
+  .daymeta .c{font-size:.7rem;color:var(--chalk-dim)}
+  .snapnote{font-size:.66rem;color:var(--chalk-dim);border:1px dashed var(--line);border-radius:8px;padding:2px 8px}
+
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:13px 14px 11px;
+    margin-bottom:12px;
+  }
+  .card .meta{display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--chalk-dim);margin-bottom:10px}
+  .badge{
+    border:1px solid var(--line);border-radius:6px;padding:1px 7px;
+    font-weight:700;color:var(--chalk);letter-spacing:.06em;font-size:.68rem;
+  }
+  .tag{color:var(--flood);font-weight:700}
+  .meta .time{margin-left:auto;font-size:.95rem;font-weight:800;color:var(--chalk)}
+  .meta .time small{font-weight:400;color:var(--chalk-dim);font-size:.62rem;margin-right:4px}
+  .meta .livepill{margin-left:auto;color:var(--live);font-weight:800;font-size:.78rem}
+  .livepill::before{content:"●";margin-right:4px;animation:blink 1.2s infinite}
+  @keyframes blink{50%{opacity:.25}}
+
+  .teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+  .team{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+  .team .flag{font-size:1.7rem;line-height:1}
+  .team .name{font-size:.92rem;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .mid{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:96px}
+  .mid .line{font-size:1.72rem;font-weight:800;color:var(--flood);letter-spacing:.02em}
+  .mid .line.vs{color:var(--chalk-dim);font-size:1.2rem;letter-spacing:.2em}
+  .mid .line.score{color:var(--chalk);font-size:1.85rem}
+  .mid .linename{font-size:.66rem;color:var(--chalk-dim);letter-spacing:.04em}
+  .mid .linename.ft{color:var(--live)}
+
+  .waters{
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);
+    font-size:.86rem;
+  }
+  .waters .hw{color:var(--home);font-weight:700;text-align:left}
+  .waters .aw{color:var(--away);font-weight:700;text-align:right}
+  .waters .mid-lab{font-size:.62rem;color:var(--chalk-dim);letter-spacing:.18em}
+  .waters .hw small,.waters .aw small{font-weight:400;color:var(--chalk-dim);font-size:.66rem;margin:0 3px}
+
+  .sub{margin-top:8px;font-size:.7rem;color:var(--chalk-dim);display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+  .sub b{color:var(--chalk);font-weight:600}
+  .panlu{border-radius:6px;padding:1px 8px;font-weight:700;border:1px solid currentColor}
+  .panlu.hwin{color:var(--home)}
+  .panlu.awin{color:var(--away)}
+  .panlu.push{color:var(--chalk-dim);border-color:var(--line)}
+
+  /* 空状态 */
+  .empty{
+    border:1px dashed var(--line);border-radius:16px;
+    padding:34px 18px;text-align:center;color:var(--chalk-dim);
+  }
+  .empty .big{font-size:1.6rem;margin-bottom:8px}
+  .empty p{font-size:.82rem;line-height:1.6}
+  .empty button{
+    margin-top:14px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;
+    color:var(--turf);background:var(--flood);border:none;border-radius:999px;padding:8px 18px;
+  }
+
+  /* 加载骨架 */
+  .skl{height:118px;border-radius:16px;border:1px solid var(--line);margin-bottom:12px;
+    background:linear-gradient(100deg, rgba(255,255,255,.03) 40%, rgba(255,255,255,.09) 50%, rgba(255,255,255,.03) 60%);
+    background-size:200% 100%;animation:sk 1.2s infinite linear}
+  @keyframes sk{to{background-position:-200% 0}}
+  @media (prefers-reduced-motion: reduce){
+    .skl,.spin .ico,.livepill::before{animation:none}
+  }
+
+  footer{padding:6px 18px 10px;text-align:center;font-size:.64rem;color:var(--chalk-dim);line-height:1.7}
+  footer .src{color:var(--chalk-dim)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topline">
+    <div>
+      <div class="eyebrow">WORLD CUP 26 · 美加墨</div>
+      <h1>世界杯 赛程 · 盘口</h1>
+      <div class="bjdate"><span id="bjdate"></span><span class="seal">雷</span></div>
+    </div>
+    <button class="refresh" id="refreshBtn" aria-label="刷新数据">
+      <span class="btn"><span class="ico">⟳</span>刷新</span>
+      <span class="status" id="status">本地快照</span>
+    </button>
+  </div>
+</header>
+
+<nav id="tabs" role="tablist" aria-label="日期"></nav>
+
+<main id="main"></main>
+
+<footer>
+  <div class="src" id="updNote">数据快照：2026-06-11 20:30（北京时间）</div>
+  盘口与赔率来自公开数据（ESPN BET 等），随时变动，仅供参考 · 时间均为北京时间 · 理性观赛
+</footer>
+
+<script>
+/* ================= 基础数据 ================= */
+const FLAGS = {
+  "墨西哥":"🇲🇽","加拿大":"🇨🇦","美国":"🇺🇸","西班牙":"🇪🇸","阿根廷":"🇦🇷","法国":"🇫🇷",
+  "英格兰":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","巴西":"🇧🇷","葡萄牙":"🇵🇹","荷兰":"🇳🇱","比利时":"🇧🇪","德国":"🇩🇪",
+  "克罗地亚":"🇭🇷","摩洛哥":"🇲🇦","哥伦比亚":"🇨🇴","乌拉圭":"🇺🇾","瑞士":"🇨🇭","日本":"🇯🇵",
+  "塞内加尔":"🇸🇳","伊朗":"🇮🇷","韩国":"🇰🇷","厄瓜多尔":"🇪🇨","奥地利":"🇦🇹","澳大利亚":"🇦🇺",
+  "挪威":"🇳🇴","巴拿马":"🇵🇦","埃及":"🇪🇬","阿尔及利亚":"🇩🇿","苏格兰":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","巴拉圭":"🇵🇾",
+  "突尼斯":"🇹🇳","科特迪瓦":"🇨🇮","乌兹别克斯坦":"🇺🇿","卡塔尔":"🇶🇦","沙特阿拉伯":"🇸🇦","沙特":"🇸🇦",
+  "南非":"🇿🇦","约旦":"🇯🇴","佛得角":"🇨🇻","加纳":"🇬🇭","库拉索":"🇨🇼","海地":"🇭🇹",
+  "新西兰":"🇳🇿","捷克":"🇨🇿","波黑":"🇧🇦","土耳其":"🇹🇷","瑞典":"🇸🇪","伊拉克":"🇮🇶",
+  "刚果民主共和国":"🇨🇩","刚果（金）":"🇨🇩","民主刚果":"🇨🇩","刚果":"🇨🇩"
+};
+function flag(name){
+  if(!name) return "⚽";
+  if(FLAGS[name]) return FLAGS[name];
+  for(const k in FLAGS){ if(name.indexOf(k)===0 || k.indexOf(name)===0) return FLAGS[k]; }
+  return "⚽";
+}
+
+/* 盘口数字 -> 中文盘名 */
+function lineName(l){
+  if(l===null || l===undefined || isNaN(l)) return "盘口待更新";
+  const v = Math.abs(l);
+  const names = {0:"平手",0.25:"平手/半球",0.5:"半球",0.75:"半球/一球",1:"一球",
+    1.25:"一球/球半",1.5:"球半",1.75:"球半/两球",2:"两球",2.25:"两球/两球半",
+    2.5:"两球半",2.75:"两球半/三球",3:"三球",3.5:"三球半",4:"四球"};
+  const n = names[v] !== undefined ? names[v] : v+"球";
+  if(v===0) return "平手盘";
+  return (l<0 ? "主让 " : "主受让 ") + n;
+}
+function fmtLine(l){
+  if(l===null || l===undefined || isNaN(l)) return null;
+  if(l===0) return "0";
+  return (l>0?"+":"") + l;
+}
+
+/* 盘路：根据完场比分与盘口计算 赢盘/赢半/走盘（含四分之一盘的半赢半输） */
+function panlu(m){
+  if(m.st!=="ft" || m.l===null || m.l===undefined || isNaN(m.l)) return null;
+  const mt = (m.sc||"").match(/(\d+)\s*[-:：]\s*(\d+)/);
+  if(!mt) return null;
+  const margin = (+mt[1]) - (+mt[2]);
+  const l = Number(m.l);
+  const half = lh => { const adj = margin + lh; return adj>0 ? 1 : (adj<0 ? -1 : 0); };
+  const isQuarter = Math.abs((l*4) % 2) === 1;     /* .25 / .75 盘 */
+  const score = isQuarter ? half(l+0.25)+half(l-0.25) : half(l)*2;  /* +2赢盘…-2输盘(主队视角) */
+  if(score===0) return {cls:"push", text:"走盘"};
+  const side = score>0 ? m.h : m.a;
+  const word = Math.abs(score)===2 ? "赢盘" : "赢半";
+  return {cls: score>0 ? "hwin" : "awin", text: side+" "+word};
+}
+
+/* ================= 快照（2026-06-11 20:30 北京时间，刷新后以实时为准） ================= */
+const SNAPSHOT_DAYS = {
+  "2026-06-10": [],
+  "2026-06-11": [],
+  "2026-06-12": [
+    {t:"03:00",g:"A",tag:"揭幕战",h:"墨西哥",a:"南非",v:"墨西哥城 · 阿兹特克",l:-1.25,ho:2.05,ao:1.80,x:[1.44,4.33,7.50],st:"up",sc:null},
+    {t:"10:00",g:"A",h:"韩国",a:"捷克",v:"瓜达拉哈拉 · 阿克伦",l:0,ho:1.87,ao:2.05,x:[2.68,3.14,2.93],st:"up",sc:null}
+  ],
+  "2026-06-13": [
+    {t:"03:00",g:"B",h:"加拿大",a:"波黑",v:"多伦多 · BMO球场",l:null,ho:null,ao:null,x:[1.83,3.75,5.00],st:"up",sc:null},
+    {t:"09:00",g:"D",h:"美国",a:"巴拉圭",v:"洛杉矶 · SoFi",l:null,ho:null,ao:null,x:[2.00,3.45,4.20],st:"up",sc:null}
+  ],
+  "2026-06-14": [
+    {t:"03:00",g:"B",h:"卡塔尔",a:"瑞士",v:"旧金山湾区",l:null,ho:null,ao:null,x:[16.0,7.0,1.24],st:"up",sc:null},
+    {t:"06:00",g:"C",h:"巴西",a:"摩洛哥",v:"纽约/新泽西",l:null,ho:null,ao:null,x:[1.69,3.95,5.80],st:"up",sc:null},
+    {t:"09:00",g:"C",h:"海地",a:"苏格兰",v:"波士顿",l:null,ho:null,ao:null,x:[6.50,4.50,1.56],st:"up",sc:null},
+    {t:"12:00",g:"D",h:"澳大利亚",a:"土耳其",v:"温哥华",l:null,ho:null,ao:null,x:[5.55,3.95,1.74],st:"up",sc:null}
+  ]
+};
+
+/* ================= 状态 ================= */
+const state = {
+  days: JSON.parse(JSON.stringify(SNAPSHOT_DAYS)),
+  fresh: {},            // 哪些日期已被实时数据覆盖
+  active: 1,            // 0昨日 1今天 2明天 3后天
+  updated: null,
+  loading: false
+};
+
+/* ================= 北京时间工具 ================= */
+function bjParts(){
+  const f = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",weekday:"short",hour12:false});
+  const p = {};
+  f.formatToParts(new Date()).forEach(o=>p[o.type]=o.value);
+  return p;
+}
+function bjTodayISO(){ const p=bjParts(); return p.year+"-"+p.month+"-"+p.day; }
+function addDays(iso,n){
+  const d = new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n);
+  return d.toISOString().slice(0,10);
+}
+const WD = ["周日","周一","周二","周三","周四","周五","周六"];
+function isoWd(iso){ return WD[new Date(iso+"T00:00:00Z").getUTCDay()]; }
+function isoShort(iso){ return iso.slice(5).replace("-","/"); }
+function isoCN(iso){ return parseInt(iso.slice(5,7))+"月"+parseInt(iso.slice(8,10))+"日"; }
+
+function slots(){
+  const today = bjTodayISO();
+  return [
+    {key:addDays(today,-1), lab:"昨日"},
+    {key:today,             lab:"今天"},
+    {key:addDays(today,1),  lab:"明天"},
+    {key:addDays(today,2),  lab:"后天"}
+  ];
+}
+
+/* ================= 渲染 ================= */
+const $ = id => document.getElementById(id);
+
+function renderHeader(){
+  const p = bjParts();
+  const wd = {Sun:"周日",Mon:"周一",Tue:"周二",Wed:"周三",Thu:"周四",Fri:"周五",Sat:"周六"}[p.weekday]||"";
+  $("bjdate").textContent = "北京时间 " + parseInt(p.month)+"月"+parseInt(p.day)+"日 "+wd+" "+p.hour+":"+p.minute;
+}
+
+function renderTabs(){
+  const sl = slots();
+  const nav = $("tabs"); nav.innerHTML = "";
+  sl.forEach((s,i)=>{
+    const b = document.createElement("button");
+    b.setAttribute("role","tab");
+    b.setAttribute("aria-selected", state.active===i ? "true":"false");
+    const has = (state.days[s.key]||[]).length>0;
+    if(has) b.classList.add("has");
+    b.innerHTML = '<span class="lab">'+s.lab+'<span class="dot"></span></span><span class="d num">'+isoShort(s.key)+'</span>';
+    b.onclick = ()=>{ state.active=i; render(); };
+    nav.appendChild(b);
+  });
+}
+
+function oddsRow(m){
+  if(m.l===null || m.l===undefined || m.ho===null || m.ho===undefined) return "";
+  return '<div class="waters num">'+
+    '<span class="hw">主 '+ (m.ho!=null?Number(m.ho).toFixed(2):"–") +'</span>'+
+    '<span class="mid-lab">让球水位</span>'+
+    '<span class="aw">'+ (m.ao!=null?Number(m.ao).toFixed(2):"–") +' 客</span></div>';
+}
+
+function card(m){
+  const live = m.st==="live", ft = m.st==="ft";
+  let midMain, midSub, midCls="line";
+  if(ft || (live && m.sc)){
+    midMain = (m.sc||"").replace("-"," : ");
+    midSub  = ft ? "完场" : "进行中";
+    midCls += " score";
+  } else if(m.l!==null && m.l!==undefined && !isNaN(m.l)){
+    midMain = fmtLine(m.l);
+    midSub  = lineName(m.l);
+  } else {
+    midMain = "VS"; midCls += " vs";
+    midSub  = "盘口待更新";
+  }
+  const timeHtml = live
+    ? '<span class="livepill">LIVE</span>'
+    : '<span class="time"><small>北京</small><span class="num">'+(m.t||"--:--")+'</span></span>';
+  const x = Array.isArray(m.x) && m.x[0]!=null
+    ? '<span>欧赔 <b class="num">'+m.x.map(v=>Number(v).toFixed(2)).join(" / ")+'</b></span>' : "";
+  const ahNote = ft && m.l!=null ? '<span>盘口 <b>'+lineName(m.l)+'</b></span>' : "";
+  const pl = panlu(m);
+  const plHtml = pl ? '<span class="panlu '+pl.cls+'">盘路 · '+pl.text+'</span>' : "";
+  return '<article class="card">'+
+    '<div class="meta">'+
+      '<span class="badge">'+(m.g? (m.g.length>2? m.g : m.g+"组") : "—")+'</span>'+
+      (m.tag?'<span class="tag">'+m.tag+'</span>':"")+
+      timeHtml+
+    '</div>'+
+    '<div class="teams">'+
+      '<div class="team"><span class="flag">'+flag(m.h)+'</span><span class="name">'+(m.h||"")+'</span></div>'+
+      '<div class="mid"><div class="'+midCls+' num">'+midMain+'</div><div class="linename'+(ft?" ft":"")+'">'+midSub+'</div></div>'+
+      '<div class="team"><span class="flag">'+flag(m.a)+'</span><span class="name">'+(m.a||"")+'</span></div>'+
+    '</div>'+
+    (ft? "" : oddsRow(m))+
+    '<div class="sub">'+ plHtml + x + ahNote + (m.v?'<span>'+m.v+'</span>':"") +'</div>'+
+  '</article>';
+}
+
+function emptyBlock(slotIdx, key){
+  const opening = "2026-06-12";
+  let icon="🌙", text="当日暂无世界杯赛事";
+  if(key < opening){
+    icon = "⏳";
+    text = "世界杯尚未开赛<br>揭幕战：北京时间 6月12日 03:00<br>墨西哥 vs 南非 · 阿兹特克体育场";
+  } else if(!state.fresh[key]){
+    text = "暂无该日数据<br>点击右上角「刷新」获取最新赛程与盘口";
+  }
+  let btn = "";
+  const sl = slots();
+  if(slotIdx<3 && (state.days[sl[slotIdx+1].key]||[]).length>0){
+    btn = '<button onclick="state.active='+(slotIdx+1)+';render()">看'+sl[slotIdx+1].lab+'赛程 →</button>';
+  }
+  return '<div class="empty"><div class="big">'+icon+'</div><p>'+text+'</p>'+btn+'</div>';
+}
+
+function render(){
+  renderHeader();
+  renderTabs();
+  const sl = slots();
+  const s = sl[state.active];
+  const list = state.days[s.key] || [];
+  let html = '<div class="daymeta">'+
+    '<span class="t">'+isoCN(s.key)+' · '+isoWd(s.key)+'</span>'+
+    '<span class="c">'+ (list.length? list.length+" 场" : "") +'</span>'+
+    (state.fresh[s.key]? "" : '<span class="snapnote">快照数据</span>')+
+  '</div>';
+  if(state.loading && !list.length){
+    html += '<div class="skl"></div><div class="skl"></div>';
+  } else if(!list.length){
+    html += emptyBlock(state.active, s.key);
+  } else {
+    const sorted = list.slice().sort((a,b)=>(a.t||"").localeCompare(b.t||""));
+    html += sorted.map(card).join("");
+  }
+  $("main").innerHTML = html;
+}
+
+/* ================= 实时刷新 ================= */
+/* 数据源：ESPN 公开接口（无需登录、无需密钥，浏览器直连） */
+
+const EN2CN = {
+  "mexico":"墨西哥","canada":"加拿大","united states":"美国","usa":"美国",
+  "spain":"西班牙","argentina":"阿根廷","france":"法国","england":"英格兰",
+  "brazil":"巴西","portugal":"葡萄牙","netherlands":"荷兰","belgium":"比利时","germany":"德国",
+  "croatia":"克罗地亚","morocco":"摩洛哥","colombia":"哥伦比亚","uruguay":"乌拉圭",
+  "switzerland":"瑞士","japan":"日本","senegal":"塞内加尔","iran":"伊朗",
+  "south korea":"韩国","korea republic":"韩国","ecuador":"厄瓜多尔","austria":"奥地利",
+  "australia":"澳大利亚","norway":"挪威","panama":"巴拿马","egypt":"埃及",
+  "algeria":"阿尔及利亚","scotland":"苏格兰","paraguay":"巴拉圭","tunisia":"突尼斯",
+  "ivory coast":"科特迪瓦","cote d'ivoire":"科特迪瓦","uzbekistan":"乌兹别克斯坦",
+  "qatar":"卡塔尔","saudi arabia":"沙特阿拉伯","south africa":"南非","jordan":"约旦",
+  "cape verde":"佛得角","cabo verde":"佛得角","ghana":"加纳","curacao":"库拉索",
+  "haiti":"海地","new zealand":"新西兰","czechia":"捷克","czech republic":"捷克",
+  "bosnia and herzegovina":"波黑","bosnia & herzegovina":"波黑","turkiye":"土耳其","turkey":"土耳其",
+  "sweden":"瑞典","iraq":"伊拉克","dr congo":"刚果（金）","democratic republic of the congo":"刚果（金）"
+};
+function cnName(en){
+  if(!en) return en;
+  const k = en.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  return EN2CN[k] || en;
+}
+const CITY_CN = {
+  "mexico city":"墨西哥城","guadalajara":"瓜达拉哈拉","zapopan":"瓜达拉哈拉","monterrey":"蒙特雷",
+  "toronto":"多伦多","vancouver":"温哥华","inglewood":"洛杉矶","los angeles":"洛杉矶",
+  "east rutherford":"纽约/新泽西","new york":"纽约/新泽西","arlington":"达拉斯","dallas":"达拉斯",
+  "atlanta":"亚特兰大","foxborough":"波士顿","boston":"波士顿","houston":"休斯敦",
+  "kansas city":"堪萨斯城","miami gardens":"迈阿密","miami":"迈阿密","philadelphia":"费城",
+  "santa clara":"旧金山湾区","san francisco":"旧金山湾区","seattle":"西雅图"
+};
+function cnCity(c){ if(!c) return null; return CITY_CN[c.toLowerCase()] || c; }
+function amToDec(am){
+  if(am===null || am===undefined || am==="" || isNaN(am)) return null;
+  am = Number(am);
+  if(am===0) return null;
+  return Math.round((am>0 ? 1+am/100 : 1+100/(-am))*100)/100;
+}
+function roundCN(note){
+  if(!note) return null;
+  const g = note.match(/Group\s+([A-L])/i);
+  if(g) return g[1].toUpperCase();
+  if(/Round of 32/i.test(note)) return "32强";
+  if(/Round of 16/i.test(note)) return "16强";
+  if(/Quarter/i.test(note)) return "8强";
+  if(/Semi/i.test(note)) return "半决赛";
+  if(/Third/i.test(note)) return "季军战";
+  if(/Final/i.test(note)) return "决赛";
+  return null;
+}
+function bjOf(date){
+  const f = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+  const p = {}; f.formatToParts(date).forEach(o=>p[o.type]=o.value);
+  return { d: p.year+"-"+p.month+"-"+p.day, hm: p.hour+":"+p.minute };
+}
+
+function parseESPNEvent(e){
+  try{
+    const comp = e.competitions && e.competitions[0]; if(!comp) return null;
+    const when = bjOf(new Date(e.date || comp.date));
+    const home = (comp.competitors||[]).find(c=>c.homeAway==="home");
+    const away = (comp.competitors||[]).find(c=>c.homeAway==="away");
+    if(!home || !away) return null;
+    const stMap = {pre:"up","in":"live",post:"ft"};
+    const st = stMap[(comp.status&&comp.status.type&&comp.status.type.state)||"pre"] || "up";
+    const sc = st==="up" ? null : (home.score??"0")+"-"+(away.score??"0");
+
+    let l=null, ho=null, ao=null, x=null;
+    const o = comp.odds && comp.odds[0];
+    if(o){
+      const hML = o.homeTeamOdds && o.homeTeamOdds.moneyLine;
+      const aML = o.awayTeamOdds && o.awayTeamOdds.moneyLine;
+      const dML = o.drawOdds && o.drawOdds.moneyLine;
+      const xs = [amToDec(hML), amToDec(dML), amToDec(aML)];
+      if(xs[0] && xs[2]) x = xs;
+      if(o.spread!==undefined && o.spread!==null && !isNaN(o.spread)){
+        const sp = Math.abs(Number(o.spread));
+        let favHome = null;
+        if(o.homeTeamOdds && typeof o.homeTeamOdds.favorite==="boolean") favHome = o.homeTeamOdds.favorite;
+        else if(o.awayTeamOdds && typeof o.awayTeamOdds.favorite==="boolean") favHome = !o.awayTeamOdds.favorite;
+        else if(hML!=null && aML!=null) favHome = Number(hML) < Number(aML);
+        l = sp===0 ? 0 : (favHome===false ? sp : -sp);
+        ho = amToDec(o.homeTeamOdds && o.homeTeamOdds.spreadOdds);
+        ao = amToDec(o.awayTeamOdds && o.awayTeamOdds.spreadOdds);
+      }
+    }
+    const note = (comp.notes && comp.notes[0] && comp.notes[0].headline) || (e.season && e.season.slug) || "";
+    const city = comp.venue && (comp.venue.address && comp.venue.address.city || comp.venue.fullName);
+    return { _d: when.d, t: when.hm, g: roundCN(note),
+      h: cnName(home.team && (home.team.displayName||home.team.shortDisplayName)),
+      a: cnName(away.team && (away.team.displayName||away.team.shortDisplayName)),
+      v: cnCity(city), l:l, ho:ho, ao:ao, x:x, st:st, sc:sc };
+  }catch(err){ return null; }
+}
+
+async function refreshViaESPN(slotKeys){
+  const from = addDays(slotKeys[0],-1).replace(/-/g,"");
+  const to   = addDays(slotKeys[3], 1).replace(/-/g,"");
+  const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates="+from+"-"+to+"&limit=200";
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("espn "+res.status);
+  const data = await res.json();
+  const byDay = {}; slotKeys.forEach(k=>byDay[k]=[]);
+  (data.events||[]).forEach(e=>{
+    const m = parseESPNEvent(e);
+    if(m && byDay[m._d]) byDay[m._d].push(m);
+  });
+  return byDay;
+}
+
+/* —— 刷新：纯 ESPN，无任何第三方登录依赖 —— */
+async function refresh(){
+  if(state.loading) return;
+  state.loading = true;
+  const btn = $("refreshBtn"); btn.classList.add("spin");
+  const st = $("status"); st.textContent = "更新中…"; st.className = "status";
+  render();
+
+  const sl = slots().map(s=>s.key);
+  let byDay = null;
+  try{ byDay = await refreshViaESPN(sl); }catch(e){ byDay = null; }
+
+  state.loading = false;
+  btn.classList.remove("spin");
+  const p = bjParts();
+  if(byDay){
+    Object.keys(byDay).forEach(d=>{
+      if(sl.indexOf(d)<0) return;
+      /* ESPN 当日空结果：仅当该日不在快照里或快照也为空时覆盖，避免接口缺数误清快照 */
+      if(byDay[d].length===0 && (state.days[d]||[]).length>0 && !state.fresh[d]) return;
+      state.days[d] = byDay[d];
+      state.fresh[d] = true;
+    });
+    state.updated = p.hour+":"+p.minute;
+    st.textContent = "已更新 "+state.updated;
+    st.className = "status ok";
+    $("updNote").textContent = "实时数据（ESPN）更新于 北京时间 "+p.hour+":"+p.minute;
+  } else {
+    st.textContent = "刷新失败 · 显示快照";
+    st.className = "status err";
+  }
+  render();
+}
+
+$("refreshBtn").onclick = refresh;
+render();
+setTimeout(refresh, 400);          /* 打开即自动拉取最新数据 */
+setInterval(renderHeader, 30000);  /* 顶部时钟 */
+</script>
+</body>
+</html>
