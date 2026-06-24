@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>世界杯26 · 赛程盘口</title>
+<style>
+  :root{
+    --turf:#0E271C;
+    --turf-2:#0A1D15;
+    --card:#163828;
+    --card-2:#11301F;
+    --chalk:#F1F6EF;
+    --chalk-dim:#9DB7A8;
+    --line:#2A5440;
+    --flood:#FFD75E;        /* 泛光金：真盘盘口 */
+    --model:#7CC4FF;        /* 模型盘 */
+    --home:#FF8073;
+    --away:#7CC4FF;
+    --win:#3DD68C;
+    --winhalf:#8FE0B4;
+    --push:#C9D6CE;
+    --losehalf:#F0A28C;
+    --lose:#FF6B5B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--turf-2)}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--chalk);
+    background:
+      radial-gradient(120% 60% at 50% -10%, #18402C 0%, var(--turf) 45%, var(--turf-2) 100%);
+    min-height:100vh;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:14px 14px 40px}
+
+  /* header */
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand h1{font-size:19px;font-weight:800;letter-spacing:.5px}
+  .brand .sub{font-size:11px;color:var(--chalk-dim);font-weight:600}
+  .seal{
+    width:30px;height:30px;border-radius:7px;flex:none;
+    display:grid;place-items:center;font-weight:900;font-size:17px;
+    color:#4A2D00;background:linear-gradient(145deg,#FFE07A,#E9A800);
+    box-shadow:0 1px 0 #fff6 inset,0 3px 8px #0006;
+    font-family:"Songti SC","STSong",serif;
+  }
+  .clock{text-align:right;font-variant-numeric:tabular-nums}
+  .clock .t{font-size:15px;font-weight:700;letter-spacing:.5px}
+  .clock .d{font-size:10.5px;color:var(--chalk-dim)}
+
+  .status{display:flex;align-items:center;justify-content:flex-end;gap:8px;
+    font-size:11px;color:var(--chalk-dim);margin:2px 0 12px;min-height:16px}
+  .status .dot{width:6px;height:6px;border-radius:50%;background:var(--win)}
+  .status.err .dot{background:var(--lose)}
+  .refresh{margin-left:4px;border:1px solid var(--line);background:#0000;
+    color:var(--chalk-dim);border-radius:7px;padding:3px 8px;font-size:11px;cursor:pointer}
+  .refresh:active{background:var(--line)}
+
+  /* tabs */
+  .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+  .tab{
+    border:1px solid var(--line);background:var(--card-2);color:var(--chalk-dim);
+    border-radius:10px;padding:8px 0;text-align:center;font-size:12.5px;font-weight:700;cursor:pointer;
+    transition:.15s;
+  }
+  .tab .n{display:block;font-size:10px;font-weight:600;opacity:.7;margin-top:1px}
+  .tab.on{background:linear-gradient(150deg,#1d4d34,#163828);color:var(--chalk);
+    border-color:#3a734f;box-shadow:0 2px 10px #0004}
+
+  /* match card */
+  .day-empty{text-align:center;color:var(--chalk-dim);padding:40px 0;font-size:13px}
+  .card{
+    background:linear-gradient(160deg,var(--card),var(--card-2));
+    border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:11px;
+    box-shadow:0 2px 12px #0003;
+  }
+  .crow{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--chalk-dim);margin-bottom:9px}
+  .grp{background:#0003;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-weight:700}
+  .ko{color:var(--flood);font-weight:700}
+  .live{color:var(--lose);font-weight:800;display:flex;align-items:center;gap:4px}
+  .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lose);
+    animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+
+  .teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+  .team{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center}
+  .team .flag{font-size:25px;line-height:1}
+  .team .nm{font-size:13.5px;font-weight:700}
+  .mid{text-align:center;min-width:62px}
+  .mid .sc{font-size:22px;font-weight:800;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .mid .vs{font-size:15px;font-weight:700;color:var(--chalk-dim)}
+  .mid .kt{font-size:10.5px;color:var(--chalk-dim);margin-top:2px}
+
+  .odds{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:11px;
+    padding-top:10px;border-top:1px dashed var(--line);flex-wrap:wrap}
+  .hcap{font-size:13px;font-weight:800;color:var(--flood)}
+  .hcap.model{color:var(--model)}
+  .od{font-size:11.5px;color:var(--chalk-dim);font-variant-numeric:tabular-nums}
+  .od b{color:var(--chalk);font-weight:700}
+  .tag{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:5px;
+    border:1px solid var(--model);color:var(--model)}
+  .tag.real{border-color:#caa23a;color:var(--flood)}
+  .book{font-size:9.5px;color:var(--chalk-dim);opacity:.7}
+
+  .result{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);
+    display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+  .pill{font-size:11px;font-weight:800;padding:3px 10px;border-radius:8px}
+  .p-win{background:#0d3a25;color:var(--win);border:1px solid #1e6e47}
+  .p-winhalf{background:#0d3320;color:var(--winhalf);border:1px solid #1a5c3a}
+  .p-push{background:#2a2f2c;color:var(--push);border:1px solid #455049}
+  .p-losehalf{background:#3a2018;color:var(--losehalf);border:1px solid #6e3a2a}
+  .p-lose{background:#3a1614;color:var(--lose);border:1px solid #7a2a24}
+  .reslbl{font-size:10.5px;color:var(--chalk-dim)}
+
+  .foot{text-align:center;font-size:10px;color:var(--chalk-dim);opacity:.6;margin-top:20px;line-height:1.6}
+  .skel{height:120px;border-radius:14px;margin-bottom:11px;
+    background:linear-gradient(100deg,var(--card-2) 30%,#1a4230 50%,var(--card-2) 70%);
+    background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{to{background-position:-200% 0}}
+
+  .warn{background:#3a2a0d;border:1px solid #6e5a1e;color:#FFE7A3;
+    border-radius:10px;padding:9px 11px;font-size:11.5px;line-height:1.5;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="seal">雷</div>
+      <div>
+        <h1>世界杯26 · 盘口</h1>
+        <div class="sub">FIFA WORLD CUP 2026 · 北京时间</div>
+      </div>
+    </div>
+    <div class="clock">
+      <div class="t" id="clk">--:--</div>
+      <div class="d" id="cdt">----</div>
+    </div>
+  </div>
+  <div class="status" id="status"><span class="dot"></span><span id="stxt">加载中…</span>
+    <button class="refresh" id="refresh">刷新</button></div>
+
+  <div id="keywarn"></div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="list"></div>
+
+  <div class="foot">
+    比分·赛程·结果 来自 ESPN 公开数据 · 让球盘 来自 The Odds API<br>
+    盘口标「真盘」为市场实盘(Pinnacle优先)，标「模型盘」为赔率反推参考
+  </div>
+</div>
+
+<script>
+/* ===================== 配置 ===================== */
+// 在这里填你自己的 The Odds API key（建议上线前重置成新key，因为静态页会公开暴露）
+const ODDS_API_KEY = "172a8dd1cee517de805808ec976bc9da";
+
+const ODDS_REGION = "eu";              // eu 档亚盘档位最全
+const BOOK_PRIORITY = ["pinnacle","onexbet","betfair_ex_eu","williamhill"]; // 基准盘优先级
+
+/* ===================== 队名汉化 ===================== */
+const EN2CN = {
+  "Mexico":"墨西哥","South Africa":"南非","Canada":"加拿大","United States":"美国","USA":"美国",
+  "Paraguay":"巴拉圭","South Korea":"韩国","Korea Republic":"韩国","Czechia":"捷克","Czech Republic":"捷克",
+  "Bosnia & Herzegovina":"波黑","Bosnia and Herzegovina":"波黑","Qatar":"卡塔尔","Switzerland":"瑞士",
+  "France":"法国","Senegal":"塞内加尔","Iraq":"伊拉克","Argentina":"阿根廷","Austria":"奥地利",
+  "Brazil":"巴西","Morocco":"摩洛哥","Spain":"西班牙","England":"英格兰","Scotland":"苏格兰",
+  "Germany":"德国","Netherlands":"荷兰","Japan":"日本","Portugal":"葡萄牙","Belgium":"比利时",
+  "Croatia":"克罗地亚","Uruguay":"乌拉圭","Colombia":"哥伦比亚","Ecuador":"厄瓜多尔","Norway":"挪威",
+  "Italy":"意大利","Denmark":"丹麦","Sweden":"瑞典","Poland":"波兰","Ukraine":"乌克兰","Wales":"威尔士",
+  "Turkey":"土耳其","Türkiye":"土耳其","Iran":"伊朗","Saudi Arabia":"沙特","Australia":"澳大利亚",
+  "Egypt":"埃及","Ghana":"加纳","Algeria":"阿尔及利亚","Ivory Coast":"科特迪瓦","Cote d'Ivoire":"科特迪瓦",
+  "Cameroon":"喀麦隆","Nigeria":"尼日利亚","Tunisia":"突尼斯","DR Congo":"刚果金","Congo DR":"刚果金",
+  "Cape Verde":"佛得角","Uzbekistan":"乌兹别克斯坦","Jordan":"约旦","Panama":"巴拿马","Curacao":"库拉索",
+  "Curaçao":"库拉索","Haiti":"海地","New Zealand":"新西兰","Ireland":"爱尔兰","Northern Ireland":"北爱尔兰",
+  "Romania":"罗马尼亚","Ivory Coast":"科特迪瓦","Costa Rica":"哥斯达黎加","Peru":"秘鲁","Chile":"智利"
+};
+// ESPN 有时给三字母缩写
+const ABBR2CN = {
+  SUI:"瑞士",RSA:"南非",KOR:"韩国",COD:"刚果金",CZE:"捷克",BIH:"波黑",QAT:"卡塔尔",MEX:"墨西哥",
+  CAN:"加拿大",USA:"美国",PAR:"巴拉圭",FRA:"法国",SEN:"塞内加尔",IRQ:"伊拉克",ARG:"阿根廷",AUT:"奥地利",
+  BRA:"巴西",MAR:"摩洛哥",ESP:"西班牙",ENG:"英格兰",SCO:"苏格兰",GER:"德国",NED:"荷兰",JPN:"日本",
+  POR:"葡萄牙",BEL:"比利时",CRO:"克罗地亚",URU:"乌拉圭",COL:"哥伦比亚",ECU:"厄瓜多尔",NOR:"挪威",
+  ITA:"意大利",DEN:"丹麦",SWE:"瑞典",POL:"波兰",UKR:"乌克兰",WAL:"威尔士",TUR:"土耳其",IRN:"伊朗",
+  KSA:"沙特",AUS:"澳大利亚",EGY:"埃及",GHA:"加纳",ALG:"阿尔及利亚",CIV:"科特迪瓦",CMR:"喀麦隆",
+  NGA:"尼日利亚",TUN:"突尼斯",CPV:"佛得角",UZB:"乌兹别克斯坦",JOR:"约旦",PAN:"巴拿马",CUW:"库拉索",
+  HAI:"海地",NZL:"新西兰",IRL:"爱尔兰",NIR:"北爱尔兰",ROU:"罗马尼亚",CRC:"哥斯达黎加"
+};
+const FLAG = {
+  墨西哥:"🇲🇽",南非:"🇿🇦",加拿大:"🇨🇦",美国:"🇺🇸",巴拉圭:"🇵🇾",韩国:"🇰🇷",捷克:"🇨🇿",波黑:"🇧🇦",
+  卡塔尔:"🇶🇦",瑞士:"🇨🇭",法国:"🇫🇷",塞内加尔:"🇸🇳",伊拉克:"🇮🇶",阿根廷:"🇦🇷",奥地利:"🇦🇹",
+  巴西:"🇧🇷",摩洛哥:"🇲🇦",西班牙:"🇪🇸",英格兰:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",苏格兰:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",德国:"🇩🇪",荷兰:"🇳🇱",日本:"🇯🇵",
+  葡萄牙:"🇵🇹",比利时:"🇧🇪",克罗地亚:"🇭🇷",乌拉圭:"🇺🇾",哥伦比亚:"🇨🇴",厄瓜多尔:"🇪🇨",挪威:"🇳🇴",
+  意大利:"🇮🇹",丹麦:"🇩🇰",瑞典:"🇸🇪",波兰:"🇵🇱",乌克兰:"🇺🇦",威尔士:"🏴󠁧󠁢󠁷󠁬󠁳󠁿",土耳其:"🇹🇷",伊朗:"🇮🇷",
+  沙特:"🇸🇦",澳大利亚:"🇦🇺",埃及:"🇪🇬",加纳:"🇬🇭",阿尔及利亚:"🇩🇿",科特迪瓦:"🇨🇮",喀麦隆:"🇨🇲",
+  尼日利亚:"🇳🇬",突尼斯:"🇹🇳",刚果金:"🇨🇩",佛得角:"🇨🇻",乌兹别克斯坦:"🇺🇿",约旦:"🇯🇴",巴拿马:"🇵🇦",
+  库拉索:"🇨🇼",海地:"🇭🇹",新西兰:"🇳🇿",爱尔兰:"🇮🇪",北爱尔兰:"🇬🇧",罗马尼亚:"🇷🇴",哥斯达黎加:"🇨🇷"
+};
+function cnName(full, abbr){
+  if(full && EN2CN[full]) return EN2CN[full];
+  if(abbr && ABBR2CN[abbr]) return ABBR2CN[abbr];
+  if(full){ // 模糊兜底
+    for(const k in EN2CN){ if(full.includes(k)||k.includes(full)) return EN2CN[k]; }
+  }
+  return full || abbr || "?";
+}
+function flagOf(cn){ return FLAG[cn] || "⚽"; }
+
+/* ===================== 时间 ===================== */
+function bjOf(iso){ // 转北京时间 Date
+  return new Date(iso);
+}
+function bjStr(iso){
+  const d = new Date(iso);
+  const f = new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
+  return f.format(d);
+}
+function bjDayKey(iso){ // 北京时间的 YYYY-MM-DD
+  const d=new Date(iso);
+  const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
+  return f.format(d);
+}
+function todayBJ(offset){
+  const now=new Date();
+  const bj=new Date(now.getTime()+ (now.getTimezoneOffset()*60000) + 8*3600000);
+  bj.setDate(bj.getDate()+offset);
+  const y=bj.getFullYear(),m=String(bj.getMonth()+1).padStart(2,'0'),d=String(bj.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+function espnDate(offset){ return todayBJ(offset).replace(/-/g,''); } // ESPN 用 YYYYMMDD（按北京日历日）
+
+/* ===================== 盘口中文命名 ===================== */
+// point 为主队让球数(负=主让, 正=主受让)。这里 spreads 的 point 直接来自 bookmaker
+function lineName(homePoint){
+  const p = homePoint;
+  const give = p < 0;            // 主队让球
+  const a = Math.abs(p);
+  const NAME={0:"平手",0.25:"平手/半球",0.5:"半球",0.75:"半球/一球",1:"一球",
+    1.25:"一球/球半",1.5:"球半",1.75:"球半/两球",2:"两球",2.25:"两球/两球半",2.5:"两球半",3:"三球"};
+  const nm = NAME[a] !== undefined ? NAME[a] : a+"球";
+  if(a===0) return "平手";
+  return (give?"主让":"主受让")+nm;
+}
+
+/* ===================== 盘路计算（完成场次） ===================== */
+// homePoint: 主队让球(负=让), hs/as: 主/客进球
+function panResult(homePoint, hs, as){
+  // 把主队让球后的净胜分 = (hs + homePoint) - as
+  const diff = (hs + homePoint) - as;
+  // 处理 .25/.75 半球半结算：拆成两半取平均
+  const frac = Math.abs(homePoint*4)%2; // 0.25/0.75 类含 .25 余数
+  let res;
+  if(Math.abs(homePoint*2)%2===1){ // .5 整半球，无走盘
+    res = diff>0 ? "win" : "lose";
+  } else if(frac===1){ // .25 / .75 类，半赢半走 或 半输半走
+    const lineLow = homePoint - 0.25, lineHigh = homePoint + 0.25;
+    const dLow=(hs+lineLow)-as, dHigh=(hs+lineHigh)-as;
+    const r1 = dLow>0?1:(dLow<0?-1:0);
+    const r2 = dHigh>0?1:(dHigh<0?-1:0);
+    const s=r1+r2;
+    if(s===2)res="win"; else if(s===1)res="winhalf"; else if(s===0)res="push";
+    else if(s===-1)res="losehalf"; else res="lose";
+  } else { // 整数球，可能走盘
+    res = diff>0?"win":(diff<0?"lose":"push");
+  }
+  return res;
+}
+const PAN_LABEL={win:"赢盘",winhalf:"赢半",push:"走盘",losehalf:"输半",lose:"输盘"};
+const PAN_CLASS={win:"p-win",winhalf:"p-winhalf",push:"p-push",losehalf:"p-losehalf",lose:"p-lose"};
+
+/* ===================== 赔率反推模型盘（兜底） ===================== */
+function modelLineFromOdds(homeDec, awayDec){
+  if(!homeDec||!awayDec) return null;
+  const ph=1/homeDec, pa=1/awayDec;
+  const r=ph/(ph+pa); // 主队相对强度 0..1
+  // 经验映射到让球档（粗略，仅兜底参考）
+  const table=[[.50,0],[.55,-0.25],[.60,-0.5],[.65,-0.75],[.70,-1],[.75,-1.25],[.80,-1.5],[.85,-1.75],[.90,-2]];
+  let line=0;
+  for(const [thr,l] of table){ if(r>=thr) line=l; }
+  if(r<.45){ // 客强，主队受让
+    const t2=[[.45,0.25],[.40,0.5],[.35,0.75],[.30,1],[.25,1.25],[.20,1.5]];
+    for(const [thr,l] of t2){ if(r<=thr) line=l; }
+  }
+  return line;
+}
+
+/* ===================== 数据抓取 ===================== */
+const ESPN="https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+
+async function fetchESPN(offset){
+  const url=`${ESPN}?dates=${espnDate(offset)}`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error("ESPN "+r.status);
+  const j=await r.json();
+  return (j.events||[]).map(ev=>{
+    const c=ev.competitions[0];
+    const comp=c.competitors;
+    const home=comp.find(x=>x.homeAway==="home")||comp[0];
+    const away=comp.find(x=>x.homeAway==="away")||comp[1];
+    const st=ev.status||c.status;
+    const stType=st.type||{};
+    const hcn=cnName(home.team.displayName||home.team.name, home.team.abbreviation);
+    const acn=cnName(away.team.displayName||away.team.name, away.team.abbreviation);
+    return {
+      id:ev.id,
+      iso:ev.date,
+      home:hcn, away:acn,
+      homeRaw:(home.team.displayName||home.team.name),
+      awayRaw:(away.team.displayName||away.team.name),
+      hs:home.score!=null?parseInt(home.score):null,
+      as:away.score!=null?parseInt(away.score):null,
+      state:stType.state,                       // pre / in / post
+      detail:stType.shortDetail||stType.description||"",
+      group:(ev.season&&ev.groupings)?"":"",
+      venue:(c.venue&&c.venue.fullName)||""
+    };
+  });
+}
+
+// 拉一次全量世界杯赔率，建立 "homeRaw|awayRaw" -> spreads 索引
+let ODDS_INDEX=null, ODDS_FETCHED_AT=0;
+async function fetchOdds(){
+  if(!ODDS_API_KEY) return null;
+  if(ODDS_INDEX && Date.now()-ODDS_FETCHED_AT < 60000) return ODDS_INDEX; // 1分钟缓存省额度
+  const url=`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds`
+    +`?regions=${ODDS_REGION}&markets=h2h,spreads&oddsFormat=decimal&apiKey=${ODDS_API_KEY}`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error("ODDS "+r.status);
+  const arr=await r.json();
+  const idx={};
+  for(const ev of arr){
+    const key=ev.home_team+"|"+ev.away_team;
+    // 选基准 bookmaker
+    let chosen=null;
+    for(const pref of BOOK_PRIORITY){
+      const b=ev.bookmakers.find(x=>x.key===pref && x.markets.some(m=>m.key==="spreads"));
+      if(b){chosen=b;break;}
+    }
+    if(!chosen) chosen=ev.bookmakers.find(x=>x.markets.some(m=>m.key==="spreads"));
+    let spreads=null, h2h=null;
+    const anyH2H=(chosen||ev.bookmakers[0]);
+    if(anyH2H){
+      const m=anyH2H.markets.find(m=>m.key==="h2h");
+      if(m) h2h={};
+    }
+    // h2h 取任意一家
+    for(const b of ev.bookmakers){
+      const m=b.markets.find(m=>m.key==="h2h");
+      if(m){ h2h={}; for(const o of m.outcomes){ h2h[o.name]=o.price; } break; }
+    }
+    if(chosen){
+      const m=chosen.markets.find(m=>m.key==="spreads");
+      if(m){
+        const ho=m.outcomes.find(o=>o.name===ev.home_team);
+        const ao=m.outcomes.find(o=>o.name===ev.away_team);
+        if(ho&&ao){ spreads={ homePoint:ho.point, homeOdd:ho.price, awayOdd:ao.price, book:chosen.title }; }
+      }
+    }
+    idx[key]={home:ev.home_team,away:ev.away_team,spreads,h2h};
+  }
+  ODDS_INDEX=idx; ODDS_FETCHED_AT=Date.now();
+  return idx;
+}
+
+// 名字匹配（ESPN 名 vs OddsAPI 名 可能略不同）
+function matchOdds(idx, homeRaw, awayRaw){
+  if(!idx) return null;
+  const norm=s=>(s||"").toLowerCase().replace(/[^a-z]/g,"");
+  const hr=norm(homeRaw), ar=norm(awayRaw);
+  for(const k in idx){
+    const e=idx[k];
+    const eh=norm(e.home), ea=norm(e.away);
+    const hit = (eh.includes(hr)||hr.includes(eh)) && (ea.includes(ar)||ar.includes(ea));
+    const swap= (eh.includes(ar)||ar.includes(eh)) && (ea.includes(hr)||hr.includes(ea));
+    if(hit) return {data:e,swapped:false};
+    if(swap) return {data:e,swapped:true};
+  }
+  return null;
+}
+
+/* ===================== 渲染 ===================== */
+let CUR=1; // tab: 0昨 1今 2明 3后
+const TABS=[{o:-1,t:"昨天"},{o:0,t:"今天"},{o:1,t:"明天"},{o:2,t:"后天"}];
+
+function renderTabs(){
+  const box=document.getElementById('tabs'); box.innerHTML='';
+  TABS.forEach((tb,i)=>{
+    const el=document.createElement('div');
+    el.className='tab'+(i===CUR?' on':'');
+    const dk=todayBJ(tb.o).slice(5).replace('-','/');
+    el.innerHTML=`${tb.t}<span class="n">${dk}</span>`;
+    el.onclick=()=>{CUR=i;renderTabs();load();};
+    box.appendChild(el);
+  });
+}
+
+function oddsBlock(m, oddsHit){
+  // 优先真盘
+  if(oddsHit && oddsHit.data.spreads){
+    let {homePoint,homeOdd,awayOdd,book}=oddsHit.data.spreads;
+    if(oddsHit.swapped){ homePoint=-homePoint; const t=homeOdd;homeOdd=awayOdd;awayOdd=t; }
+    return {homePoint, html:`
+      <span class="hcap">${lineName(homePoint)}</span>
+      <span class="od">主 <b>${homeOdd?.toFixed(2)||'-'}</b></span>
+      <span class="od">客 <b>${awayOdd?.toFixed(2)||'-'}</b></span>
+      <span class="tag real">真盘</span>
+      <span class="book">${book||''}</span>`, real:true};
+  }
+  // 兜底 h2h 反推模型盘
+  let hd=null,ad=null;
+  if(oddsHit && oddsHit.data.h2h){
+    const h=oddsHit.data.h2h;
+    hd=h[oddsHit.data.home]; ad=h[oddsHit.data.away];
+    if(oddsHit.swapped){ const t=hd;hd=ad;ad=t; }
+  }
+  const ml=modelLineFromOdds(hd,ad);
+  if(ml!==null){
+    return {homePoint:ml, html:`
+      <span class="hcap model">${lineName(ml)}</span>
+      <span class="od">主 <b>${hd?hd.toFixed(2):'-'}</b></span>
+      <span class="od">客 <b>${ad?ad.toFixed(2):'-'}</b></span>
+      <span class="tag">模型盘</span>`, real:false};
+  }
+  return {homePoint:null, html:`<span class="od">盘口待更新</span>`, real:false};
+}
+
+function card(m, idx){
+  const oddsHit=matchOdds(idx, m.homeRaw, m.awayRaw);
+  const ob=oddsBlock(m, oddsHit);
+
+  let scoreMid, crowRight;
+  if(m.state==="post"){
+    scoreMid=`<div class="sc">${m.hs} - ${m.as}</div><div class="kt">完场</div>`;
+    crowRight=`<span>${bjStr(m.iso)}</span>`;
+  } else if(m.state==="in"){
+    scoreMid=`<div class="sc">${m.hs} - ${m.as}</div><div class="kt">${m.detail}</div>`;
+    crowRight=`<span class="live">LIVE</span>`;
+  } else {
+    scoreMid=`<div class="vs">VS</div><div class="kt">${bjStr(m.iso)}</div>`;
+    crowRight=`<span>${bjStr(m.iso)} 开球</span>`;
+  }
+
+  // 盘路（完成 + 有盘口）
+  let resultHTML="";
+  if(m.state==="post" && ob.homePoint!==null && m.hs!=null && m.as!=null){
+    const pr=panResult(ob.homePoint, m.hs, m.as);
+    resultHTML=`<div class="result">
+      <span class="reslbl">${lineName(ob.homePoint)} 盘路</span>
+      <span class="pill ${PAN_CLASS[pr]}">${PAN_LABEL[pr]}</span>
+      ${ob.real?'':'<span class="tag">基于模型盘</span>'}
+    </div>`;
+  }
+
+  const el=document.createElement('div');
+  el.className='card';
+  el.innerHTML=`
+    <div class="crow">
+      <span class="grp">${m.venue?m.venue.split(',')[0]:'World Cup'}</span>
+      ${crowRight}
+    </div>
+    <div class="teams">
+      <div class="team"><div class="flag">${flagOf(m.home)}</div><div class="nm">${m.home}</div></div>
+      <div class="mid">${scoreMid}</div>
+      <div class="team"><div class="flag">${flagOf(m.away)}</div><div class="nm">${m.away}</div></div>
+    </div>
+    <div class="odds">${ob.html}</div>
+    ${resultHTML}`;
+  return el;
+}
+
+function setStatus(txt, err){
+  const s=document.getElementById('status'); s.classList.toggle('err',!!err);
+  document.getElementById('stxt').textContent=txt;
+}
+
+async function load(){
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  setStatus('加载中…');
+  try{
+    const offset=TABS[CUR].o;
+    let idx=null;
+    try{ idx=await fetchOdds(); }
+    catch(e){ console.warn('odds fail',e); /* 赔率失败不阻塞，走模型盘/待更新 */ }
+    const matches=await fetchESPN(offset);
+    matches.sort((a,b)=>new Date(a.iso)-new Date(b.iso));
+    list.innerHTML='';
+    if(!matches.length){ list.innerHTML='<div class="day-empty">这一天没有比赛安排</div>'; }
+    else matches.forEach(m=>list.appendChild(card(m, idx)));
+    const now=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+    const oddsNote = ODDS_API_KEY ? (idx?'真盘已接':'赔率源异常·暂用模型盘') : '未填赔率key·暂用模型盘';
+    setStatus(`已更新 ${now} · ${oddsNote}`);
+  }catch(e){
+    list.innerHTML='<div class="day-empty">数据加载失败，点刷新重试<br><span style="opacity:.6">'+e.message+'</span></div>';
+    setStatus('加载失败',true);
+  }
+}
+
+/* ===================== 时钟 & key 提醒 ===================== */
+function tick(){
+  const now=new Date();
+  const t=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);
+  const d=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'long',day:'numeric',weekday:'short'}).format(now);
+  document.getElementById('clk').textContent=t;
+  document.getElementById('cdt').textContent=d;
+}
+function keyWarn(){
+  if(!ODDS_API_KEY){
+    document.getElementById('keywarn').innerHTML=
+      '<div class="warn">⚠ 还没填 The Odds API key，当前盘口走「模型盘」(赔率反推)。'
+      +'在源码顶部 <b>ODDS_API_KEY</b> 填入你的 key 即可显示真实让球盘。</div>';
+  }
+}
+
+document.getElementById('refresh').onclick=load;
+keyWarn();
+renderTabs();
+tick(); setInterval(tick,1000);
+load();
+setInterval(()=>{ if(document.visibilityState==='visible') load(); }, 90000); // 90秒自动刷新
+</script>
+</body>
+</html>
